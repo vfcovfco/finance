@@ -5,38 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>財務管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
-  --bg: #0f1117;
-  --bg2: #161820;
-  --bg3: #1e2028;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text: #e8eaf0;
-  --text2: #9094a8;
-  --text3: #565a6e;
-  --green: #3dd68c;
-  --green-bg: rgba(61,214,140,0.1);
-  --red: #ff6b6b;
-  --red-bg: rgba(255,107,107,0.1);
-  --blue: #60a5fa;
-  --blue-bg: rgba(96,165,250,0.1);
-  --amber: #fbbf24;
-  --amber-bg: rgba(251,191,36,0.1);
-  --purple: #a78bfa;
-  --purple-bg: rgba(167,139,250,0.1);
-  --radius: 10px;
-  --radius-lg: 14px;
+  --bg: #0f1117; --bg2: #161820; --bg3: #1e2028;
+  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+  --text: #e8eaf0; --text2: #9094a8; --text3: #565a6e;
+  --green: #3dd68c; --green-bg: rgba(61,214,140,0.1);
+  --red: #ff6b6b; --red-bg: rgba(255,107,107,0.1);
+  --blue: #60a5fa; --blue-bg: rgba(96,165,250,0.1);
+  --amber: #fbbf24; --amber-bg: rgba(251,191,36,0.1);
+  --purple: #a78bfa; --purple-bg: rgba(167,139,250,0.1);
+  --radius: 10px; --radius-lg: 14px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
 .app { display: flex; min-height: 100vh; }
 
+/* Login screen */
+#login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 20px; }
+#login-screen.hidden { display: none; }
+.login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 40px; text-align: center; max-width: 360px; width: 90%; }
+.login-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.login-sub { font-size: 12px; color: var(--text3); margin-bottom: 28px; }
+.login-btn { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; background: white; color: #333; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+.login-btn:hover { opacity: 0.9; }
+.login-btn img { width: 20px; height: 20px; }
+
 /* Sidebar */
-.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 0; flex-shrink: 0; }
-.sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
-.logo-text { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); }
+.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.logo-text { font-size: 13px; font-weight: 700; }
 .logo-sub { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border2); }
 .sidebar-section { padding: 16px 12px 8px; }
 .sidebar-label { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; font-weight: 500; padding: 0 8px; margin-bottom: 4px; }
 .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--text2); font-size: 13px; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
@@ -60,7 +61,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: va
 .page { display: none; }
 .page.active { display: block; }
 
-/* Cards */
+/* Metric cards */
 .metric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .metric-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
 .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
@@ -105,8 +106,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .bar-name { font-size: 12px; color: var(--text2); width: 36px; flex-shrink: 0; }
 .bar-track { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
-.bar-val { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text2); width: 80px; text-align: right; flex-shrink: 0; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.bar-val { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text2); width: 90px; text-align: right; flex-shrink: 0; }
 
 /* Progress */
 .progress-wrap { background: var(--bg3); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 6px; }
@@ -123,34 +124,41 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .btn-save { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; background: var(--green); color: #0f1117; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
 .btn-save:hover { opacity: 0.85; }
 .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
 
 /* Alerts */
 .alert-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 .alert { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; font-size: 12px; }
 .alert-warn { background: var(--amber-bg); border: 1px solid rgba(251,191,36,0.2); color: var(--amber); }
 .alert-info { background: var(--blue-bg); border: 1px solid rgba(96,165,250,0.2); color: var(--blue); }
+.alert-green { background: var(--green-bg); border: 1px solid rgba(61,214,140,0.2); color: var(--green); }
 
-/* Loading */
+/* Loading / Error */
 .loading { display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 12px; padding: 20px 0; }
-.spinner { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error-msg { color: var(--red); font-size: 12px; padding: 12px 14px; background: var(--red-bg); border-radius: 8px; }
-
-/* Section title */
 .sec-title { font-size: 11px; color: var(--text3); letter-spacing: 0.08em; font-weight: 500; margin-bottom: 10px; margin-top: 20px; text-transform: uppercase; }
 .sec-title:first-child { margin-top: 0; }
 
-/* Investor cards */
+/* Investor */
 .investor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 .investor-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
 .investor-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
 .investor-amount { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; color: var(--green); margin: 8px 0 4px; }
 .investor-target { font-size: 11px; color: var(--text3); }
 
-/* Responsive */
+/* Toast */
+#toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px; padding: 12px 18px; font-size: 13px; color: var(--text); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+#toast.show { opacity: 1; }
+#toast.success { border-color: var(--green); color: var(--green); }
+#toast.error { border-color: var(--red); color: var(--red); }
+
 @media (max-width: 768px) {
   .sidebar { width: 60px; }
-  .sidebar-logo, .sidebar-label, .nav-item span, .month-selector { display: none; }
+  .sidebar-logo div, .sidebar-label, .nav-item span, .month-selector { display: none; }
+  .sidebar-logo { justify-content: center; }
+  .user-avatar { display: block; }
   .nav-item { justify-content: center; padding: 10px; }
   .content { padding: 16px; }
   .page-header { padding: 16px 16px 0; }
@@ -161,40 +169,59 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-title">財務管理系統</div>
+    <div class="login-sub">請使用 Google 帳號登入以存取資料</div>
+    <button class="login-btn" onclick="signIn()">
+      <img src="https://www.google.com/favicon.ico" alt="Google">
+      以 Google 帳號登入
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<div class="app" id="main-app" style="display:none;">
   <!-- Sidebar -->
   <nav class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-text">財務管理系統</div>
-      <div class="logo-sub">v1.0 · 2026</div>
+      <div>
+        <div class="logo-text">財務管理系統</div>
+        <div class="logo-sub">v2.0 · 2026</div>
+      </div>
+      <img id="user-avatar" class="user-avatar" src="" alt="user" style="display:none;">
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">主要功能</div>
-      <button class="nav-item active" onclick="showPage('overview')">
+      <button class="nav-item active" onclick="showPage('overview', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span>總覽</span>
       </button>
-      <button class="nav-item" onclick="showPage('expense')">
+      <button class="nav-item" onclick="showPage('expense', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <span>支出表</span>
       </button>
-      <button class="nav-item" onclick="showPage('income')">
+      <button class="nav-item" onclick="showPage('income', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         <span>收入表</span>
       </button>
-      <button class="nav-item" onclick="showPage('cashflow')">
+      <button class="nav-item" onclick="showPage('cashflow', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         <span>資金流水</span>
       </button>
-      <button class="nav-item" onclick="showPage('accounts')">
+      <button class="nav-item" onclick="showPage('accounts', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>個人帳戶</span>
       </button>
-      <button class="nav-item" onclick="showPage('investors')">
+      <button class="nav-item" onclick="showPage('investors', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
         <span>投資方</span>
       </button>
-      <button class="nav-item" onclick="showPage('cumulative')">
+      <button class="nav-item" onclick="showPage('cumulative', this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span>累計帳戶</span>
       </button>
@@ -202,7 +229,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="month-selector">
       <div class="month-label">查看月份</div>
       <select class="month-select" id="monthSelect" onchange="onMonthChange()">
-        <option value="202605">2026-05</option>
+        <option value="202601">2026-01</option>
+        <option value="202602">2026-02</option>
+        <option value="202603">2026-03</option>
+        <option value="202604">2026-04</option>
+        <option value="202605" selected>2026-05</option>
         <option value="202606">2026-06</option>
         <option value="202607">2026-07</option>
         <option value="202608">2026-08</option>
@@ -219,9 +250,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="page-header">
       <div>
         <div class="page-title" id="pageTitle">總覽</div>
-        <div class="page-sub" id="pageSub">載入中...</div>
+        <div class="page-sub" id="pageSub">2026年05月</div>
       </div>
-      <button class="sync-btn" onclick="syncData()">
+      <button class="sync-btn" onclick="syncCurrent()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.66"/></svg>
         重新同步
       </button>
@@ -233,12 +264,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div id="overview-alerts" class="alert-list"></div>
         <div id="overview-metrics" class="metric-row"></div>
         <div class="sec-title">各帳戶本月淨額</div>
-        <div class="table-card" style="padding:16px 18px;">
-          <div id="overview-bars"></div>
-        </div>
-        <div class="sec-title">支出分佈（各人合計）</div>
+        <div class="table-card" style="padding:16px 18px;"><div id="overview-bars"></div></div>
+        <div class="sec-title">帳戶明細</div>
         <div class="table-card">
-          <div class="table-wrap"><table id="overview-person-table">
+          <div class="table-wrap"><table>
             <thead><tr><th>帳戶</th><th>本月收入</th><th>本月支出</th><th>本月淨額</th></tr></thead>
             <tbody id="overview-person-tbody"></tbody>
           </table></div>
@@ -257,23 +286,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr>
-                  <th>刷卡日</th><th>原幣(USD)</th><th>匯率</th>
+                <thead><tr><th>刷卡日</th><th>原幣(USD)</th><th>匯率</th>
                   <th>則儒TS</th><th>則儒LU</th><th>昀潔TS</th><th>昀潔LU</th>
                   <th>世學TS</th><th>世學LU</th><th>璿皓TS</th><th>璿皓LU</th>
                   <th>婉茹TS</th><th>婉茹LU</th><th>芮妤TS</th><th>芮妤LU</th>
-                  <th>總計(TWD)</th>
-                </tr></thead>
+                  <th>總計(TWD)</th></tr></thead>
                 <tbody id="expense-tbody"></tbody>
               </table>
             </div>
           </div>
           <div class="table-card">
             <div class="table-card-header"><span class="table-card-title">各人支出合計</span></div>
-            <div class="table-wrap">
-              <table><thead><tr><th>帳戶</th><th>TS 合計</th><th>LU 合計</th><th>總計(TWD)</th></tr></thead>
-              <tbody id="expense-summary-tbody"></tbody></table>
-            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>帳戶</th><th>TS 合計</th><th>LU 合計</th><th>總計(TWD)</th></tr></thead>
+              <tbody id="expense-summary-tbody"></tbody>
+            </table></div>
           </div>
         </div>
         <div id="expense-error" class="error-msg" style="display:none;"></div>
@@ -289,12 +316,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <span class="table-card-title">收入明細</span>
               <span id="income-source" style="font-size:11px;color:var(--text3);"></span>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>#</th><th>申請日</th><th>TS帳號</th><th>LU帳號</th><th>TF帳號</th><th>出金額(USD)</th><th>匯率</th><th>台幣金額(TWD)</th><th>投資方</th></tr></thead>
-                <tbody id="income-tbody"></tbody>
-              </table>
-            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>#</th><th>申請日</th><th>TS帳號</th><th>LU帳號</th><th>TF帳號</th><th>出金額(USD)</th><th>匯率</th><th>台幣(TWD)</th></tr></thead>
+              <tbody id="income-tbody"></tbody>
+            </table></div>
           </div>
         </div>
         <div id="income-error" class="error-msg" style="display:none;"></div>
@@ -306,7 +331,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="table-card">
           <div class="table-card-header">
             <span class="table-card-title">流水記錄</span>
-            <button class="btn-save" style="padding:5px 12px;font-size:11px;" onclick="toggleForm('cashflow-form')">＋ 新增</button>
+            <button class="btn-save btn-sm" onclick="toggleForm('cashflow-form')">＋ 新增記錄</button>
           </div>
           <div id="cashflow-form" style="display:none;padding:16px 18px;border-bottom:1px solid var(--border);">
             <div class="form-grid">
@@ -329,9 +354,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <div class="form-group"><label class="form-label">金額 (TWD)</label><input type="number" class="form-input" id="cf-amount" placeholder="0"></div>
               <div class="form-group"><label class="form-label">備註</label><input type="text" class="form-input" id="cf-note" placeholder="備註..."></div>
             </div>
-            <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
-              <button class="btn-save" onclick="saveCashflow()">儲存</button>
-              <span id="cf-msg" style="font-size:12px;color:var(--green);display:none;">✓ 已儲存至 Sheets</span>
+            <div style="margin-top:12px;">
+              <button class="btn-save" id="cf-submit-btn" onclick="saveCashflow()">儲存至 Google Sheets</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -350,18 +374,13 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <!-- 投資方 -->
       <div id="page-investors" class="page">
         <div class="investor-grid" id="investor-grid"></div>
-        <div class="sec-title">代墊未還款</div>
-        <div class="table-card">
-          <div class="table-wrap">
-            <table><thead><tr><th>代墊方</th><th>項目</th><th>金額</th><th>狀態</th></tr></thead>
-            <tbody id="advance-tbody"></tbody></table>
-          </div>
-        </div>
       </div>
 
       <!-- 累計帳戶 -->
       <div id="page-cumulative" class="page">
-        <div style="margin-bottom:16px;font-size:12px;color:var(--text3);">每月月底結算後，將各人本月淨額填入對應欄位。</div>
+        <div style="margin-bottom:16px;">
+          <div class="alert alert-info" style="margin-bottom:0;">每月月底結算後，將各人本月淨額填入 Google Sheets「累計帳戶」工作表。</div>
+        </div>
         <div class="table-card">
           <div class="table-card-header"><span class="table-card-title">累計帳戶餘額</span></div>
           <div class="table-wrap">
@@ -376,98 +395,119 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 </div>
 
 <script>
-// ===== 設定區 =====
-const API_KEY = 'AIzaSyAfR8oneEmTyj3Drb6LB_LVs8tqOxNvDGU';
-const DAILY_SHEET_ID = '1lOYSTevqGdyBEyDf7zBFyTc3LBNh6afOd82fNN3FMyY';
-const MGMT_SHEET_ID  = '1w6CE-1Sq8U_MpZT4y8LyRhzN8X7lr1Cp4XC_AhcQ7xI';
-const PERSONS = ['則儒','昀潔','世學','璿皓','婉茹','芮妤'];
-const PERSON_COLORS = ['#3dd68c','#60a5fa','#f97316','#a78bfa','#fbbf24','#f472b6'];
+// ===== 設定 =====
+const CLIENT_ID = '53240920516-7ir4ig77imagas76egbqp96lrrup8ckn.apps.googleusercontent.com';
+const API_KEY   = 'AIzaSyAfR8oneEmTyj3Drb6LB_LVs8tqOxNvDGU';
+const DAILY_ID  = '1lOYSTevqGdyBEyDf7zBFyTc3LBNh6afOd82fNN3FMyY';
+const MGMT_ID   = '1gNXmffpxBYQT71wB9Saup2XnuZyhBmLNfgRWVE5GvDk';
+const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets';
+const PERSONS   = ['則儒','昀潔','世學','璿皓','婉茹','芮妤'];
+const P_COLORS  = ['#3dd68c','#60a5fa','#f97316','#a78bfa','#fbbf24','#f472b6'];
+const INCOME_MAP = {則儒:60000,昀潔:60000,世學:60000,璿皓:60000,婉茹:80000,芮妤:60000};
 const DEFAULT_RATE = 31.5;
-const INCOME_PER_PERSON = {則儒:60000,昀潔:60000,世學:60000,璿皓:60000,婉茹:80000,芮妤:60000};
 
+let accessToken = null;
 let currentMonth = '202605';
 let expenseData = null;
-let incomeData = null;
+let incomeData  = null;
 let cashflowData = [];
-let cumulativeData = [];
 
-// ===== Sheets API =====
-async function fetchSheet(sheetId, sheetName, range) {
-  const encodedName = encodeURIComponent(`${sheetName}!${range}`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodedName}?key=${API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || `HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return data.values || [];
+// ===== Auth =====
+function signIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { showToast('登入失敗：' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      onSignedIn();
+    }
+  });
+  client.requestAccessToken();
 }
 
-async function appendSheet(sheetId, sheetName, values) {
-  const encodedName = encodeURIComponent(`${sheetName}!A:G`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodedName}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${API_KEY}`;
+function onSignedIn() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('main-app').style.display = 'flex';
+  loadOverview();
+  loadCashflow();
+}
+
+// ===== API =====
+async function fetchSheet(sheetId, sheetName, range) {
+  const enc = encodeURIComponent(sheetName + '!' + range);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${enc}?key=${API_KEY}`;
+  const res = await fetch(url, { headers: accessToken ? { Authorization: 'Bearer ' + accessToken } : {} });
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'HTTP ' + res.status); }
+  return (await res.json()).values || [];
+}
+
+async function appendToSheet(sheetId, sheetName, values) {
+  if (!accessToken) throw new Error('請先登入');
+  const enc = encodeURIComponent(sheetName + '!A:G');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${enc}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({values})
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken },
+    body: JSON.stringify({ values })
   });
-  if (!res.ok) throw new Error('寫入失敗，請確認試算表已設定編輯權限');
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || '寫入失敗'); }
   return res.json();
 }
 
+// ===== Helpers =====
+function parseTWD(s) { return parseFloat(String(s||'').replace(/[NT$,\s]/g,'')) || 0; }
+function parseUSD(s) { return parseFloat(String(s||'').replace(/[$,\s]/g,'')) || 0; }
+function fmtTWD(n) { return 'NT$' + Math.round(n).toLocaleString(); }
+function fmtDate(s) {
+  if (!s) return '—';
+  s = String(s);
+  if (s.includes('月')) {
+    const m = s.match(/(\d+)月(\d+)/);
+    if (m) return '2026/' + parseInt(m[1]) + '/' + parseInt(m[2]);
+  }
+  if (s.match(/^\d{5}$/)) {
+    const d = new Date(Math.round((parseInt(s) - 25569) * 86400000));
+    return d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate();
+  }
+  return s;
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = (type==='success'?'✓ ':type==='error'?'✕ ':'') + msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
 // ===== Navigation =====
-function showPage(id) {
+function showPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
+  if (btn) btn.classList.add('active');
   const titles = {overview:'總覽',expense:'支出表',income:'收入表',cashflow:'資金流水帳',accounts:'個人帳戶',investors:'投資方',cumulative:'累計帳戶'};
-  document.getElementById('pageTitle').textContent = titles[id] || id;
-  document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+currentMonth.slice(4)+'月';
-  event.currentTarget.classList.add('active');
-  if (id === 'expense' && !expenseData) loadExpense();
-  if (id === 'income' && !incomeData) loadIncome();
-  if (id === 'cashflow') loadCashflow();
-  if (id === 'accounts') renderAccounts();
-  if (id === 'investors') renderInvestors();
-  if (id === 'cumulative') loadCumulative();
+  document.getElementById('pageTitle').textContent = titles[id]||id;
+  document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+parseInt(currentMonth.slice(4))+'月';
+  if (id==='expense' && !expenseData) loadExpense();
+  if (id==='income'  && !incomeData)  loadIncome();
+  if (id==='cashflow') loadCashflow();
+  if (id==='accounts') renderAccounts();
+  if (id==='investors') renderInvestors();
+  if (id==='cumulative') loadCumulative();
 }
 
 function onMonthChange() {
   currentMonth = document.getElementById('monthSelect').value;
   expenseData = null; incomeData = null;
-  document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+currentMonth.slice(4)+'月';
-  syncData();
+  const active = document.querySelector('.page.active');
+  if (active) showPage(active.id.replace('page-',''), null);
 }
 
-function syncData() {
+function syncCurrent() {
   expenseData = null; incomeData = null;
   const active = document.querySelector('.page.active');
-  if (!active) return;
-  const id = active.id.replace('page-','');
-  if (id === 'expense') loadExpense();
-  else if (id === 'income') loadIncome();
-  else if (id === 'overview') loadOverview();
-  else if (id === 'cashflow') loadCashflow();
-}
-
-// ===== Parse helpers =====
-function parseTWD(str) {
-  if (!str) return 0;
-  return parseFloat(String(str).replace(/[NT$,\s]/g,'')) || 0;
-}
-function parseUSD(str) {
-  if (!str) return 0;
-  return parseFloat(String(str).replace(/[$,\s]/g,'')) || 0;
-}
-function fmtTWD(n) {
-  return 'NT$' + Math.round(n).toLocaleString();
-}
-function fmtDate(str) {
-  if (!str) return '—';
-  // Handle various formats
-  if (str.includes('月')) return '2026/'+str.replace('月','日').replace('日','').replace(/(\d+)\/(\d+)/,'$1/$2');
-  return str;
+  if (active) { const id = active.id.replace('page-',''); showPage(id, null); }
 }
 
 // ===== Expense =====
@@ -476,70 +516,48 @@ async function loadExpense() {
   document.getElementById('expense-content').style.display = 'none';
   document.getElementById('expense-error').style.display = 'none';
   try {
-    const sheetName = currentMonth + '支出';
-    const rows = await fetchSheet(DAILY_SHEET_ID, sheetName, 'A1:T50');
+    const rows = await fetchSheet(DAILY_ID, currentMonth+'支出', 'A1:T60');
     expenseData = parseExpense(rows);
     renderExpense();
-    document.getElementById('expense-source').textContent = sheetName + ' · 日報表';
+    document.getElementById('expense-source').textContent = currentMonth+'支出 · 日報表';
   } catch(e) {
     document.getElementById('expense-loading').style.display = 'none';
     document.getElementById('expense-error').style.display = 'block';
-    document.getElementById('expense-error').textContent = '無法讀取支出資料：' + e.message + '（工作表：'+currentMonth+'支出）';
+    document.getElementById('expense-error').textContent = '讀取失敗：'+e.message;
   }
 }
 
 function parseExpense(rows) {
-  // Find data rows (has date in col A, numeric value in col B)
-  const result = { rows: [], totals: {} };
-  PERSONS.forEach(p => result.totals[p] = {ts:0, lu:0});
-  
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r || !r[0]) continue;
-    const dateStr = String(r[0]);
-    if (!dateStr.includes('月') && !dateStr.match(/^\d{4}/)) continue;
+  const result = { rows:[], totals:{} };
+  PERSONS.forEach(p => result.totals[p] = {ts:0,lu:0});
+  for (const r of rows) {
+    if (!r||!r[0]) continue;
+    const ds = String(r[0]);
+    if (!ds.includes('月') && !ds.match(/^\d{5}$/)) continue;
     const usd = parseUSD(r[1]);
-    if (!usd || usd <= 0) continue;
+    if (!usd || usd<=0) continue;
     const rate = parseFloat(r[2]) || DEFAULT_RATE;
-    // cols: 則儒TS=4, 則儒LU=5, 昀潔TS=6, 昀潔LU=7, 世學TS=8, 世學LU=9, 璿皓TS=10, 璿皓LU=11, 婉茹TS=12, 婉茹LU=13, 芮妤TS=14, 芮妤LU=15
-    const cols = [4,5,6,7,8,9,10,11,12,13,14,15];
-    const vals = cols.map(c => parseTWD(r[c]));
+    const vals = [4,5,6,7,8,9,10,11,12,13,14,15].map(c => parseTWD(r[c]));
     const total = vals.reduce((a,b)=>a+b,0);
-    const row = { date: fmtDate(dateStr), usd, rate, vals, total };
-    result.rows.push(row);
-    PERSONS.forEach((p, pi) => {
-      result.totals[p].ts += vals[pi*2];
-      result.totals[p].lu += vals[pi*2+1];
-    });
+    result.rows.push({ date:fmtDate(ds), usd, rate, vals, total });
+    PERSONS.forEach((p,i) => { result.totals[p].ts += vals[i*2]; result.totals[p].lu += vals[i*2+1]; });
   }
   return result;
 }
 
 function renderExpense() {
-  if (!expenseData) return;
   document.getElementById('expense-loading').style.display = 'none';
   document.getElementById('expense-content').style.display = 'block';
-
-  const grandTotal = Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu, 0);
+  const grand = Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0);
   document.getElementById('expense-metrics').innerHTML = `
-    <div class="metric-card"><div class="metric-label">本月支出合計</div><div class="metric-val red">${fmtTWD(grandTotal)}</div></div>
-    <div class="metric-card"><div class="metric-label">刷卡筆數</div><div class="metric-val">${expenseData.rows.length}</div></div>
-  `;
-
-  const tbody = document.getElementById('expense-tbody');
-  tbody.innerHTML = expenseData.rows.map(r => `
-    <tr>
-      <td>${r.date}</td>
-      <td class="td-mono">$${r.usd.toFixed(2)}</td>
-      <td class="td-mono">${r.rate}</td>
-      ${r.vals.map(v => `<td class="td-mono">${v>0?fmtTWD(v):'—'}</td>`).join('')}
-      <td class="td-mono td-amber">${fmtTWD(r.total)}</td>
-    </tr>
-  `).join('');
-
-  const sTbody = document.getElementById('expense-summary-tbody');
-  sTbody.innerHTML = PERSONS.map((p,i) => {
-    const t = expenseData.totals[p];
+    <div class="metric-card"><div class="metric-label">本月支出合計</div><div class="metric-val red">${fmtTWD(grand)}</div></div>
+    <div class="metric-card"><div class="metric-label">刷卡筆數</div><div class="metric-val">${expenseData.rows.length}</div></div>`;
+  document.getElementById('expense-tbody').innerHTML = expenseData.rows.map(r=>`
+    <tr><td>${r.date}</td><td class="td-mono">$${r.usd.toFixed(2)}</td><td class="td-mono">${r.rate}</td>
+    ${r.vals.map(v=>`<td class="td-mono">${v>0?fmtTWD(v):'—'}</td>`).join('')}
+    <td class="td-mono td-amber">${fmtTWD(r.total)}</td></tr>`).join('');
+  document.getElementById('expense-summary-tbody').innerHTML = PERSONS.map((p,i)=>{
+    const t=expenseData.totals[p];
     return `<tr><td>${p}</td><td class="td-mono">${fmtTWD(t.ts)}</td><td class="td-mono">${fmtTWD(t.lu)}</td><td class="td-mono td-amber">${fmtTWD(t.ts+t.lu)}</td></tr>`;
   }).join('');
 }
@@ -550,81 +568,59 @@ async function loadIncome() {
   document.getElementById('income-content').style.display = 'none';
   document.getElementById('income-error').style.display = 'none';
   try {
-    const sheetName = currentMonth + '收入';
-    const rows = await fetchSheet(DAILY_SHEET_ID, sheetName, 'A1:G50');
+    const rows = await fetchSheet(DAILY_ID, currentMonth+'收入', 'A1:G60');
     incomeData = parseIncome(rows);
     renderIncome();
-    document.getElementById('income-source').textContent = sheetName + ' · 日報表';
+    document.getElementById('income-source').textContent = currentMonth+'收入 · 日報表';
   } catch(e) {
     document.getElementById('income-loading').style.display = 'none';
     document.getElementById('income-error').style.display = 'block';
-    document.getElementById('income-error').textContent = '無法讀取收入資料：' + e.message;
+    document.getElementById('income-error').textContent = '讀取失敗：'+e.message;
   }
 }
 
 function parseIncome(rows) {
-  const result = { rows: [], totalUSD: 0, totalTWD: 0 };
-  let idx = 1;
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r) continue;
-    // Row with申請日 in col B (index 1) and amount in col E (index 5)
-    const dateStr = r[1] ? String(r[1]) : '';
+  const result = { rows:[], totalUSD:0, totalTWD:0 };
+  let idx=1;
+  for (const r of rows) {
     const usd = parseUSD(r[5]);
-    if (!usd || usd <= 0) continue;
+    if (!usd || usd<=0) continue;
     const rate = parseFloat(r[6]) || DEFAULT_RATE;
-    const twd = usd * rate;
-    result.rows.push({
-      idx: idx++,
-      date: dateStr || '—',
-      ts: r[2] || '—',
-      lu: r[3] || '—',
-      tf: r[4] || '—',
-      usd, rate, twd,
-      investor: '—'
-    });
-    result.totalUSD += usd;
-    result.totalTWD += twd;
+    const twd = usd*rate;
+    result.rows.push({ idx:idx++, date:r[1]||'—', ts:r[2]||'—', lu:r[3]||'—', tf:r[4]||'—', usd, rate, twd });
+    result.totalUSD += usd; result.totalTWD += twd;
   }
   return result;
 }
 
 function renderIncome() {
-  if (!incomeData) return;
   document.getElementById('income-loading').style.display = 'none';
   document.getElementById('income-content').style.display = 'block';
   document.getElementById('income-metrics').innerHTML = `
     <div class="metric-card"><div class="metric-label">本月收入(USD)</div><div class="metric-val green">$${incomeData.totalUSD.toFixed(2)}</div></div>
     <div class="metric-card"><div class="metric-label">本月收入(TWD)</div><div class="metric-val green">${fmtTWD(incomeData.totalTWD)}</div></div>
-    <div class="metric-card"><div class="metric-label">收入筆數</div><div class="metric-val">${incomeData.rows.length}</div></div>
-  `;
+    <div class="metric-card"><div class="metric-label">收入筆數</div><div class="metric-val">${incomeData.rows.length}</div></div>`;
   const tbody = document.getElementById('income-tbody');
-  if (incomeData.rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">本月尚無收入資料</td></tr>';
+  if (!incomeData.rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">本月尚無收入資料</td></tr>';
     return;
   }
-  tbody.innerHTML = incomeData.rows.map(r => `
-    <tr>
-      <td>${r.idx}</td><td>${r.date}</td>
-      <td class="td-mono">${r.ts}</td><td class="td-mono">${r.lu}</td><td class="td-mono">${r.tf}</td>
-      <td class="td-mono td-green">$${r.usd.toFixed(2)}</td>
-      <td class="td-mono">${r.rate}</td>
-      <td class="td-mono td-green">${fmtTWD(r.twd)}</td>
-      <td>${r.investor}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = incomeData.rows.map(r=>`
+    <tr><td>${r.idx}</td><td>${r.date}</td><td class="td-mono">${r.ts}</td><td class="td-mono">${r.lu}</td>
+    <td class="td-mono">${r.tf}</td><td class="td-mono td-green">$${r.usd.toFixed(2)}</td>
+    <td class="td-mono">${r.rate}</td><td class="td-mono td-green">${fmtTWD(r.twd)}</td></tr>`).join('');
 }
 
 // ===== Cashflow =====
 async function loadCashflow() {
   try {
-    const rows = await fetchSheet(MGMT_SHEET_ID, '資金流水帳', 'A6:G60');
-    cashflowData = rows.filter(r => r && r[0] && String(r[0]).match(/^\d/)).map((r,i) => ({
-      n: r[0], date: r[1]||'', from: r[2]||'', to: r[3]||'', type: r[4]||'', amount: parseTWD(r[5]), note: r[6]||''
-    }));
+    const rows = await fetchSheet(MGMT_ID, '資金流水帳', 'A2:G100');
+    cashflowData = rows
+      .filter(r => r && r[0] && String(r[0]).match(/^\d/))
+      .map(r => ({ n:r[0], date:fmtDate(r[1]), from:r[2]||'', to:r[3]||'', type:r[4]||'', amount:parseTWD(r[5]), note:r[6]||'' }));
     renderCashflow();
   } catch(e) {
-    document.getElementById('cashflow-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--red)">讀取失敗：${e.message}</td></tr>`;
+    document.getElementById('cashflow-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--red);padding:16px;">讀取失敗：${e.message}</td></tr>`;
   }
 }
 
@@ -635,47 +631,77 @@ function renderCashflow() {
     <div class="metric-card"><div class="metric-label">目標總額</div><div class="metric-val">${fmtTWD(target)}</div></div>
     <div class="metric-card"><div class="metric-label">已匯入</div><div class="metric-val green">${fmtTWD(invested)}</div>
       <div class="progress-wrap"><div class="progress-fill" style="width:${Math.min(100,Math.round(invested/target*100))}%"></div></div>
-      <div class="metric-sub">${Math.round(invested/target*100)}%</div>
-    </div>
-    <div class="metric-card"><div class="metric-label">尚待匯入</div><div class="metric-val amber">${fmtTWD(target-invested)}</div></div>
-  `;
+      <div class="metric-sub">${Math.round(invested/target*100)}%</div></div>
+    <div class="metric-card"><div class="metric-label">尚待匯入</div><div class="metric-val amber">${fmtTWD(Math.max(0,target-invested))}</div></div>`;
   const typeMap = {投資方匯入:'badge-green',內部轉帳:'badge-blue',刷卡支出:'badge-amber',其他支出:'badge-red'};
-  document.getElementById('cashflow-tbody').innerHTML = cashflowData.map(r => `
-    <tr>
-      <td>${r.n}</td>
-      <td>${r.date}</td>
-      <td><span class="badge ${typeMap[r.type]||'badge-purple'}">${r.type}</span></td>
-      <td>${r.from||'—'}</td><td>${r.to||'—'}</td>
-      <td class="td-mono">${fmtTWD(r.amount)}</td>
-      <td style="color:var(--text3)">${r.note||'—'}</td>
-    </tr>
-  `).join('');
+  document.getElementById('cashflow-tbody').innerHTML = cashflowData.length
+    ? cashflowData.map(r=>`
+        <tr><td>${r.n}</td><td>${r.date}</td>
+        <td><span class="badge ${typeMap[r.type]||'badge-purple'}">${r.type}</span></td>
+        <td>${r.from||'—'}</td><td>${r.to||'—'}</td>
+        <td class="td-mono">${fmtTWD(r.amount)}</td>
+        <td style="color:var(--text3)">${r.note||'—'}</td></tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">尚無記錄</td></tr>';
+}
+
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  if (show) document.getElementById('cf-date').value = new Date().toISOString().slice(0,10);
+}
+
+async function saveCashflow() {
+  const date   = document.getElementById('cf-date').value;
+  const type   = document.getElementById('cf-type').value;
+  const from   = document.getElementById('cf-from').value;
+  const to     = document.getElementById('cf-to').value;
+  const amount = document.getElementById('cf-amount').value;
+  const note   = document.getElementById('cf-note').value;
+  if (!date || !amount) { showToast('請填入日期和金額', 'error'); return; }
+  const btn = document.getElementById('cf-submit-btn');
+  btn.disabled = true; btn.textContent = '儲存中...';
+  try {
+    const nextN = cashflowData.length + 1;
+    await appendToSheet(MGMT_ID, '資金流水帳', [[nextN, date, from, to, type, Number(amount), note]]);
+    showToast('已儲存至 Google Sheets');
+    document.getElementById('cf-amount').value = '';
+    document.getElementById('cf-note').value = '';
+    document.getElementById('cashflow-form').style.display = 'none';
+    await loadCashflow();
+  } catch(e) {
+    showToast('儲存失敗：' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = '儲存至 Google Sheets';
 }
 
 // ===== Accounts =====
 function renderAccounts() {
   const tabs = document.getElementById('person-tabs');
   const contents = document.getElementById('person-contents');
-  tabs.innerHTML = PERSONS.map((p,i) => `<button class="person-tab${i===0?' active':''}" onclick="switchPerson(${i})">${p}</button>`).join('');
-
-  contents.innerHTML = PERSONS.map((p,i) => {
-    const income = INCOME_PER_PERSON[p] || 60000;
-    const expense = expenseData ? (expenseData.totals[p].ts + expenseData.totals[p].lu) : 0;
-    const net = income - expense;
-    return `
-    <div id="person-${i}" class="person-content${i===0?' active':''}">
+  tabs.innerHTML = PERSONS.map((p,i)=>`<button class="person-tab${i===0?' active':''}" onclick="switchPerson(${i})">${p}</button>`).join('');
+  contents.innerHTML = PERSONS.map((p,i)=>{
+    const income = INCOME_MAP[p]||60000;
+    const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
+    const net = income-exp;
+    const rows = expenseData ? expenseData.rows.filter(r=>r.vals[i*2]>0||r.vals[i*2+1]>0) : [];
+    return `<div id="person-${i}" class="person-content${i===0?' active':''}">
       <div class="metric-row">
         <div class="metric-card"><div class="metric-label">本月收入</div><div class="metric-val green">${fmtTWD(income)}</div></div>
-        <div class="metric-card"><div class="metric-label">本月支出</div><div class="metric-val red">${fmtTWD(expense)}</div></div>
+        <div class="metric-card"><div class="metric-label">本月支出</div><div class="metric-val red">${fmtTWD(exp)}</div></div>
         <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${net>=0?'+':''}${fmtTWD(net)}</div></div>
       </div>
       <div class="table-card">
         <div class="table-card-header"><span class="table-card-title">${p} 支出明細</span></div>
         <div class="table-wrap"><table>
           <thead><tr><th>刷卡日</th><th>TS (TWD)</th><th>LU (TWD)</th><th>合計</th></tr></thead>
-          <tbody>${expenseData ? expenseData.rows.filter(r=>r.vals[i*2]>0||r.vals[i*2+1]>0).map(r=>`
-            <tr><td>${r.date}</td><td class="td-mono">${r.vals[i*2]>0?fmtTWD(r.vals[i*2]):'—'}</td><td class="td-mono">${r.vals[i*2+1]>0?fmtTWD(r.vals[i*2+1]):'—'}</td><td class="td-mono td-amber">${fmtTWD(r.vals[i*2]+r.vals[i*2+1])}</td></tr>
-          `).join('') : '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:16px">請先前往支出表載入資料</td></tr>'}</tbody>
+          <tbody>${rows.length ? rows.map(r=>`
+            <tr><td>${r.date}</td>
+            <td class="td-mono">${r.vals[i*2]>0?fmtTWD(r.vals[i*2]):'—'}</td>
+            <td class="td-mono">${r.vals[i*2+1]>0?fmtTWD(r.vals[i*2+1]):'—'}</td>
+            <td class="td-mono td-amber">${fmtTWD(r.vals[i*2]+r.vals[i*2+1])}</td></tr>`).join('')
+            : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px">'+(expenseData?'本月無支出':'請先前往支出表載入資料')+'</td></tr>'
+          }</tbody>
         </table></div>
       </div>
     </div>`;
@@ -689,14 +715,10 @@ function switchPerson(idx) {
 
 // ===== Investors =====
 function renderInvestors() {
-  const invested = cashflowData.length > 0
-    ? cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0)
-    : 401009;
-  const kuo = cashflowData.length > 0
-    ? cashflowData.filter(r=>r.type==='投資方匯入'&&r.note&&r.note.includes('Kuo')).reduce((a,r)=>a+r.amount,0)
-    : 201000;
-  const louis = invested - kuo;
-
+  const invested = cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0);
+  const kuo   = cashflowData.filter(r=>r.type==='投資方匯入'&&r.note&&(r.note.toUpperCase().includes('KUO')||r.note.includes('小郭'))).reduce((a,r)=>a+r.amount,0);
+  const louis = cashflowData.filter(r=>r.type==='投資方匯入'&&r.note&&(r.note.toUpperCase().includes('LOUIS')||r.note.includes('則儒'))).reduce((a,r)=>a+r.amount,0);
+  const untagged = invested - kuo - louis;
   document.getElementById('investor-grid').innerHTML = `
     <div class="investor-card">
       <div class="investor-name">小郭 (Kuo)</div>
@@ -710,117 +732,60 @@ function renderInvestors() {
       <div class="investor-target">目標 NT$300,000 · ${Math.round(louis/300000*100)}%</div>
       <div class="progress-wrap"><div class="progress-fill" style="width:${Math.min(100,Math.round(louis/300000*100))}%"></div></div>
     </div>
-  `;
-  document.getElementById('advance-tbody').innerHTML = `
-    <tr><td>小郭</td><td>電腦設備</td><td class="td-mono td-red">NT$20,820</td><td><span class="badge badge-amber">待還款</span></td></tr>
-    <tr><td>小郭</td><td>文具</td><td class="td-mono td-red">NT$189</td><td><span class="badge badge-amber">待還款</span></td></tr>
-  `;
+    ${untagged>0?`<div class="investor-card" style="grid-column:1/-1;">
+      <div class="investor-name" style="color:var(--text3);font-size:12px;">未標記投資方</div>
+      <div class="investor-amount" style="font-size:16px;">${fmtTWD(untagged)}</div>
+      <div class="investor-target">資金流水帳備註中未含 Kuo/Louis 的投資方匯入</div>
+    </div>`:''}`;
 }
 
 // ===== Cumulative =====
 async function loadCumulative() {
   try {
-    const rows = await fetchSheet(MGMT_SHEET_ID, '累計帳戶', 'A3:H20');
+    const rows = await fetchSheet(MGMT_ID, '累計帳戶', 'A3:H20');
     const tbody = document.getElementById('cumulative-tbody');
-    tbody.innerHTML = rows.filter(r=>r&&r[0]&&String(r[0]).match(/^\d{6}/)).map(r=>`
-      <tr>
-        <td class="td-mono">${r[0]}</td>
-        ${[1,2,3,4,5,6].map(i=>{const v=parseTWD(r[i]);return`<td class="td-mono ${v>0?'td-green':v<0?'td-red':''}">${v?fmtTWD(v):'—'}</td>`;}).join('')}
-      </tr>
-    `).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px">尚無累計資料</td></tr>';
+    const data = rows.filter(r=>r&&r[0]&&String(r[0]).match(/^\d{6}/));
+    tbody.innerHTML = data.length
+      ? data.map(r=>`<tr><td class="td-mono">${r[0]}</td>${[1,2,3,4,5,6].map(i=>{const v=parseTWD(r[i]);return`<td class="td-mono ${v>0?'td-green':v<0?'td-red':''}">${v?fmtTWD(v):'—'}</td>`;}).join('')}</tr>`).join('')
+      : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">尚無累計資料</td></tr>';
   } catch(e) {
-    document.getElementById('cumulative-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--red)">讀取失敗：${e.message}</td></tr>`;
+    document.getElementById('cumulative-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--red);padding:12px;">讀取失敗：${e.message}</td></tr>`;
   }
 }
 
 // ===== Overview =====
 async function loadOverview() {
-  document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+currentMonth.slice(4)+'月';
   try {
     if (!expenseData) {
-      const sheetName = currentMonth + '支出';
-      const rows = await fetchSheet(DAILY_SHEET_ID, sheetName, 'A1:T50');
+      const rows = await fetchSheet(DAILY_ID, currentMonth+'支出', 'A1:T60');
       expenseData = parseExpense(rows);
     }
   } catch(e) {}
-
-  const totalExpense = expenseData ? Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0) : 245668;
-  const totalIncome = Object.values(INCOME_PER_PERSON).reduce((a,b)=>a+b,0);
-  const net = totalIncome - totalExpense;
-
-  document.getElementById('overview-alerts').innerHTML = `
-    <div class="alert alert-warn">💰 累計帳戶 ${currentMonth} 尚未填入各人本月淨額</div>
-    <div class="alert alert-warn">💸 小郭代墊 NT$21,009 尚未還款</div>
-    <div class="alert alert-info">📊 日報表資料已同步至 ${currentMonth}</div>
-  `;
-
+  const totalExp = expenseData ? Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0) : 0;
+  const totalInc = Object.values(INCOME_MAP).reduce((a,b)=>a+b,0);
+  const net = totalInc - totalExp;
+  document.getElementById('overview-alerts').innerHTML = totalExp===0
+    ? `<div class="alert alert-info">正在載入支出資料...</div>`
+    : `<div class="alert alert-green">✓ 日報表資料已同步（${currentMonth}）</div>`;
   document.getElementById('overview-metrics').innerHTML = `
-    <div class="metric-card"><div class="metric-label">本月總收入</div><div class="metric-val green">${fmtTWD(totalIncome)}</div></div>
-    <div class="metric-card"><div class="metric-label">本月總支出</div><div class="metric-val red">${fmtTWD(totalExpense)}</div></div>
+    <div class="metric-card"><div class="metric-label">本月總收入</div><div class="metric-val green">${fmtTWD(totalInc)}</div></div>
+    <div class="metric-card"><div class="metric-label">本月總支出</div><div class="metric-val red">${fmtTWD(totalExp)}</div></div>
     <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${fmtTWD(net)}</div></div>
-    <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>
-  `;
-
-  const maxNet = Math.max(...PERSONS.map(p=>INCOME_PER_PERSON[p]-(expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0)));
-  document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>{
-    const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
-    const n = INCOME_PER_PERSON[p] - exp;
-    return `<div class="bar-row">
+    <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>`;
+  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return INCOME_MAP[p]-e; });
+  const maxNet = Math.max(...nets.map(Math.abs), 1);
+  document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>`
+    <div class="bar-row">
       <div class="bar-name">${p}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(0,Math.round(n/maxNet*100))}%;background:${PERSON_COLORS[i]}"></div></div>
-      <div class="bar-val">${n>=0?'+':''}${fmtTWD(n)}</div>
-    </div>`;
-  }).join('');
-
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,Math.round(Math.abs(nets[i])/maxNet*100))}%;background:${P_COLORS[i]}"></div></div>
+      <div class="bar-val">${nets[i]>=0?'+':''}${fmtTWD(nets[i])}</div>
+    </div>`).join('');
   document.getElementById('overview-person-tbody').innerHTML = PERSONS.map((p,i)=>{
-    const income = INCOME_PER_PERSON[p];
-    const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
-    const n = income - exp;
-    return `<tr>
-      <td>${p}</td>
-      <td class="td-mono td-green">${fmtTWD(income)}</td>
-      <td class="td-mono td-red">${fmtTWD(exp)}</td>
-      <td class="td-mono ${n>=0?'td-green':'td-red'}">${n>=0?'+':''}${fmtTWD(n)}</td>
-    </tr>`;
+    const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0;
+    const n=INCOME_MAP[p]-e;
+    return `<tr><td>${p}</td><td class="td-mono td-green">${fmtTWD(INCOME_MAP[p])}</td><td class="td-mono td-red">${fmtTWD(e)}</td><td class="td-mono ${n>=0?'td-green':'td-red'}">${n>=0?'+':''}${fmtTWD(n)}</td></tr>`;
   }).join('');
 }
-
-// ===== Cashflow Form =====
-function toggleForm(id) {
-  const el = document.getElementById(id);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  if (el.style.display === 'block') {
-    document.getElementById('cf-date').value = new Date().toISOString().slice(0,10);
-  }
-}
-
-async function saveCashflow() {
-  const date = document.getElementById('cf-date').value;
-  const type = document.getElementById('cf-type').value;
-  const from = document.getElementById('cf-from').value;
-  const to = document.getElementById('cf-to').value;
-  const amount = document.getElementById('cf-amount').value;
-  const note = document.getElementById('cf-note').value;
-  if (!date || !amount) { alert('請填入日期和金額'); return; }
-  const btn = document.querySelector('.btn-save');
-  btn.disabled = true; btn.textContent = '儲存中...';
-  try {
-    const nextNum = cashflowData.length + 1;
-    await appendSheet(MGMT_SHEET_ID, '資金流水帳', [[nextNum, date, from, to, type, amount, note]]);
-    document.getElementById('cf-msg').style.display = 'inline';
-    setTimeout(()=>{ document.getElementById('cf-msg').style.display='none'; }, 3000);
-    document.getElementById('cf-amount').value = '';
-    document.getElementById('cf-note').value = '';
-    await loadCashflow();
-  } catch(e) {
-    alert('儲存失敗：'+e.message+'\n\n請確認財務管理試算表已設定為「編輯者」共用。');
-  }
-  btn.disabled = false; btn.textContent = '儲存';
-}
-
-// ===== Init =====
-loadOverview();
-loadCashflow();
 </script>
 </body>
 </html>
