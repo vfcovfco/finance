@@ -403,7 +403,14 @@ const MGMT_ID   = '1gNXmffpxBYQT71wB9Saup2XnuZyhBmLNfgRWVE5GvDk';
 const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets';
 const PERSONS   = ['則儒','昀潔','世學','璿皓','婉茹','芮妤'];
 const P_COLORS  = ['#3dd68c','#60a5fa','#f97316','#a78bfa','#fbbf24','#f472b6'];
-const INCOME_MAP = {則儒:60000,昀潔:60000,世學:60000,璿皓:60000,婉茹:80000,芮妤:60000};
+// 個人收入從資金流水帳「內部轉帳」自動計算
+function calcPersonIncome(person) {
+  return cashflowData.filter(r=>r.type==='內部轉帳'&&r.to===person).reduce((a,r)=>a+r.amount,0);
+}
+// 日報表實際收入（USD換台幣）
+function calcTotalIncome() {
+  return incomeData ? incomeData.totalTWD : 0;
+}
 const DEFAULT_RATE = 31.5;
 
 let accessToken = null;
@@ -681,7 +688,7 @@ function renderAccounts() {
   const contents = document.getElementById('person-contents');
   tabs.innerHTML = PERSONS.map((p,i)=>`<button class="person-tab${i===0?' active':''}" onclick="switchPerson(${i})">${p}</button>`).join('');
   contents.innerHTML = PERSONS.map((p,i)=>{
-    const income = INCOME_MAP[p]||60000;
+    const income = calcPersonIncome(p);
     const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
     const net = income-exp;
     const rows = expenseData ? expenseData.rows.filter(r=>r.vals[i*2]>0||r.vals[i*2+1]>0) : [];
@@ -762,17 +769,19 @@ async function loadOverview() {
     }
   } catch(e) {}
   const totalExp = expenseData ? Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0) : 0;
-  const totalInc = Object.values(INCOME_MAP).reduce((a,b)=>a+b,0);
-  const net = totalInc - totalExp;
+  const totalInc = calcTotalIncome();
+  const totalPersonInc = PERSONS.reduce((a,p)=>a+calcPersonIncome(p),0);
+  const net = totalPersonInc - totalExp;
   document.getElementById('overview-alerts').innerHTML = totalExp===0
     ? `<div class="alert alert-info">正在載入支出資料...</div>`
     : `<div class="alert alert-green">✓ 日報表資料已同步（${currentMonth}）</div>`;
   document.getElementById('overview-metrics').innerHTML = `
-    <div class="metric-card"><div class="metric-label">本月總收入</div><div class="metric-val green">${fmtTWD(totalInc)}</div></div>
+    <div class="metric-card"><div class="metric-label">實際收入(日報表)</div><div class="metric-val green">${fmtTWD(totalInc)}</div></div>
     <div class="metric-card"><div class="metric-label">本月總支出</div><div class="metric-val red">${fmtTWD(totalExp)}</div></div>
     <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${fmtTWD(net)}</div></div>
+    <div class="metric-card"><div class="metric-label">投資方匯入</div><div class="metric-val amber">${fmtTWD(cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0))}</div></div>
     <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>`;
-  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return INCOME_MAP[p]-e; });
+  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return calcPersonIncome(p)-e; });
   const maxNet = Math.max(...nets.map(Math.abs), 1);
   document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>`
     <div class="bar-row">
@@ -782,8 +791,8 @@ async function loadOverview() {
     </div>`).join('');
   document.getElementById('overview-person-tbody').innerHTML = PERSONS.map((p,i)=>{
     const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0;
-    const n=INCOME_MAP[p]-e;
-    return `<tr><td>${p}</td><td class="td-mono td-green">${fmtTWD(INCOME_MAP[p])}</td><td class="td-mono td-red">${fmtTWD(e)}</td><td class="td-mono ${n>=0?'td-green':'td-red'}">${n>=0?'+':''}${fmtTWD(n)}</td></tr>`;
+    const inc2=calcPersonIncome(p); const n=inc2-e;
+    const inc=calcPersonIncome(p); const n2=inc-e; return `<tr><td>${p}</td><td class="td-mono td-green">${fmtTWD(inc)}</td><td class="td-mono td-red">${fmtTWD(e)}</td><td class="td-mono ${n2>=0?'td-green':'td-red'}">${n2>=0?'+':''}${fmtTWD(n2)}</td></tr>`;
   }).join('');
 }
 </script>
