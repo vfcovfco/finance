@@ -221,10 +221,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
         <span>投資方</span>
       </button>
-      <button class="nav-item" onclick="showPage('cumulative', this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        <span>累計帳戶</span>
-      </button>
+
     </div>
     <div class="month-selector">
       <div class="month-label">查看月份</div>
@@ -376,19 +373,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="investor-grid" id="investor-grid"></div>
       </div>
 
-      <!-- 累計帳戶 -->
-      <div id="page-cumulative" class="page">
-        <div style="margin-bottom:16px;">
-          <div class="alert alert-info" style="margin-bottom:0;">每月月底結算後，將各人本月淨額填入 Google Sheets「累計帳戶」工作表。</div>
-        </div>
-        <div class="table-card">
-          <div class="table-card-header"><span class="table-card-title">累計帳戶餘額</span></div>
-          <div class="table-wrap">
-            <table><thead><tr><th>月份</th><th>則儒</th><th>昀潔</th><th>世學</th><th>璿皓</th><th>婉茹</th><th>芮妤</th></tr></thead>
-            <tbody id="cumulative-tbody"></tbody></table>
-          </div>
-        </div>
-      </div>
+
 
     </div>
   </div>
@@ -493,7 +478,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   if (btn) btn.classList.add('active');
-  const titles = {overview:'總覽',expense:'支出表',income:'收入表',cashflow:'資金流水帳',accounts:'個人帳戶',investors:'投資方',cumulative:'累計帳戶'};
+  const titles = {overview:'總覽',expense:'支出表',income:'收入表',cashflow:'資金流水帳',accounts:'個人帳戶',investors:'投資方'};
   document.getElementById('pageTitle').textContent = titles[id]||id;
   document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+parseInt(currentMonth.slice(4))+'月';
   if (id==='expense' && !expenseData) loadExpense();
@@ -501,18 +486,19 @@ function showPage(id, btn) {
   if (id==='cashflow') loadCashflow();
   if (id==='accounts') renderAccounts();
   if (id==='investors') renderInvestors();
-  if (id==='cumulative') loadCumulative();
 }
 
 function onMonthChange() {
   currentMonth = document.getElementById('monthSelect').value;
   expenseData = null; incomeData = null;
+  allMonthsCache = {}; // 清除快取，強制重新讀取
   const active = document.querySelector('.page.active');
   if (active) showPage(active.id.replace('page-',''), null);
 }
 
 function syncCurrent() {
   expenseData = null; incomeData = null;
+  allMonthsCache = {}; // 清除快取
   const active = document.querySelector('.page.active');
   if (active) { const id = active.id.replace('page-',''); showPage(id, null); }
 }
@@ -750,19 +736,7 @@ function renderInvestors() {
     </div>`:''}`;
 }
 
-// ===== Cumulative =====
-async function loadCumulative() {
-  try {
-    const rows = await fetchSheet(MGMT_ID, '累計帳戶', 'A3:H20');
-    const tbody = document.getElementById('cumulative-tbody');
-    const data = rows.filter(r=>r&&r[0]&&String(r[0]).match(/^\d{6}/));
-    tbody.innerHTML = data.length
-      ? data.map(r=>`<tr><td class="td-mono">${r[0]}</td>${[1,2,3,4,5,6].map(i=>{const v=parseTWD(r[i]);return`<td class="td-mono ${v>0?'td-green':v<0?'td-red':''}">${v?fmtTWD(v):'—'}</td>`;}).join('')}</tr>`).join('')
-      : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">尚無累計資料</td></tr>';
-  } catch(e) {
-    document.getElementById('cumulative-tbody').innerHTML = `<tr><td colspan="7" style="color:var(--red);padding:12px;">讀取失敗：${e.message}</td></tr>`;
-  }
-}
+
 
 // ===== 累計餘額（跨月全自動）=====
 let allMonthsCache = {}; // { YYYYMM: { expense: {人:數}, income: 台幣, transfers: {人:數} } }
