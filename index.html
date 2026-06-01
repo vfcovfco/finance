@@ -745,8 +745,9 @@ let allMonthsCache = {}; // { YYYYMM: { expense: {人:數}, income: 台幣, tran
 async function loadAllMonths() {
   const year = currentMonth.slice(0,4);
   const curM = parseInt(currentMonth.slice(4));
+  const START_MONTH = 5; // 日報表從 5 月開始有資料
   const months = [];
-  for (let m=1; m<=curM; m++) months.push(year + String(m).padStart(2,'0'));
+  for (let m=START_MONTH; m<=curM; m++) months.push(year + String(m).padStart(2,'0'));
 
   // 顯示載入中
   document.getElementById('overview-alerts').innerHTML =
