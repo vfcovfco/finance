@@ -688,15 +688,19 @@ function renderAccounts() {
   const contents = document.getElementById('person-contents');
   tabs.innerHTML = PERSONS.map((p,i)=>`<button class="person-tab${i===0?' active':''}" onclick="switchPerson(${i})">${p}</button>`).join('');
   contents.innerHTML = PERSONS.map((p,i)=>{
-    const income = calcPersonIncome(p);
+    const transfer = calcPersonIncome(p); // 當月轉帳匯入
     const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
-    const net = income-exp;
+    const invShare = incomeData&&incomeData.totalTWD>0 ? Math.round(incomeData.totalTWD/PERSONS.length) : 0;
+    const monthNet = transfer + invShare - exp;
+    const cumBalance = calcCumulativeBalance(p, currentMonth);
     const rows = expenseData ? expenseData.rows.filter(r=>r.vals[i*2]>0||r.vals[i*2+1]>0) : [];
     return `<div id="person-${i}" class="person-content${i===0?' active':''}">
       <div class="metric-row">
-        <div class="metric-card"><div class="metric-label">本月收入</div><div class="metric-val green">${fmtTWD(income)}</div></div>
+        <div class="metric-card"><div class="metric-label">本月轉帳匯入</div><div class="metric-val green">${fmtTWD(transfer)}</div></div>
+        <div class="metric-card"><div class="metric-label">本月投資收入</div><div class="metric-val green">${fmtTWD(invShare)}</div></div>
         <div class="metric-card"><div class="metric-label">本月支出</div><div class="metric-val red">${fmtTWD(exp)}</div></div>
-        <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${net>=0?'+':''}${fmtTWD(net)}</div></div>
+        <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${monthNet>=0?'green':'red'}">${monthNet>=0?'+':''}${fmtTWD(monthNet)}</div></div>
+        <div class="metric-card"><div class="metric-label">累計餘額</div><div class="metric-val ${cumBalance>=0?'green':'red'}">${cumBalance>=0?'+':''}${fmtTWD(cumBalance)}</div></div>
       </div>
       <div class="table-card">
         <div class="table-card-header"><span class="table-card-title">${p} 支出明細</span></div>
@@ -760,40 +764,115 @@ async function loadCumulative() {
   }
 }
 
+// ===== 累計餘額（跨月全自動）=====
+let allMonthsCache = {}; // { YYYYMM: { expense: {人:數}, income: 台幣, transfers: {人:數} } }
+
+async function loadAllMonths() {
+  const year = currentMonth.slice(0,4);
+  const curM = parseInt(currentMonth.slice(4));
+  const months = [];
+  for (let m=1; m<=curM; m++) months.push(year + String(m).padStart(2,'0'));
+
+  // 顯示載入中
+  document.getElementById('overview-alerts').innerHTML =
+    `<div class="alert alert-info"><div class="spinner" style="display:inline-block;margin-right:8px;"></div>正在讀取所有月份資料（${months.length} 個月）...</div>`;
+
+  for (const mo of months) {
+    if (allMonthsCache[mo]) continue;
+    const data = { expense:{}, income:0, transfers:{} };
+    PERSONS.forEach(p=>{ data.expense[p]=0; data.transfers[p]=0; });
+
+    // 支出
+    try {
+      const rows = await fetchSheet(DAILY_ID, mo+'支出', 'A1:T60');
+      const parsed = parseExpense(rows);
+      PERSONS.forEach(p=>{ data.expense[p] = parsed.totals[p].ts + parsed.totals[p].lu; });
+    } catch(e) {}
+
+    // 收入
+    try {
+      const rows = await fetchSheet(DAILY_ID, mo+'收入', 'A1:G60');
+      const parsed = parseIncome(rows);
+      data.income = parsed.totalTWD;
+    } catch(e) {}
+
+    // 轉帳匯入（從資金流水帳按月份篩選）
+    const moStr = mo.slice(0,4)+'/'+parseInt(mo.slice(4));
+    cashflowData.filter(r=>r.type==='內部轉帳'&&r.date&&r.date.startsWith(moStr.slice(0,7)))
+      .forEach(r=>{ if(data.transfers[r.to]!==undefined) data.transfers[r.to]+=r.amount; });
+
+    allMonthsCache[mo] = data;
+  }
+  return months;
+}
+
+function calcCumulativeBalance(person, upToMonth) {
+  const year = upToMonth.slice(0,4);
+  const curM = parseInt(upToMonth.slice(4));
+  let balance = 0;
+  for (let m=1; m<=curM; m++) {
+    const mo = year + String(m).padStart(2,'0');
+    const d = allMonthsCache[mo];
+    if (!d) continue;
+    const invShare = d.income > 0 ? Math.round(d.income/PERSONS.length) : 0;
+    balance += (d.transfers[person]||0) + invShare - (d.expense[person]||0);
+  }
+  return balance;
+}
+
 // ===== Overview =====
 async function loadOverview() {
+  // 先讀當月支出（快速顯示）
   try {
     if (!expenseData) {
       const rows = await fetchSheet(DAILY_ID, currentMonth+'支出', 'A1:T60');
       expenseData = parseExpense(rows);
     }
   } catch(e) {}
+
+  // 讀取所有月份資料
+  await loadAllMonths();
+
   const totalExp = expenseData ? Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0) : 0;
   const totalInc = calcTotalIncome();
-  const totalPersonInc = PERSONS.reduce((a,p)=>a+calcPersonIncome(p),0);
-  const net = totalPersonInc + totalInc - totalExp;
-  document.getElementById('overview-alerts').innerHTML = totalExp===0
-    ? `<div class="alert alert-info">正在載入支出資料...</div>`
-    : `<div class="alert alert-green">✓ 日報表資料已同步（${currentMonth}）</div>`;
+  const totalInvested = cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0);
+
+  // 累計餘額加總
+  const totalBalance = PERSONS.reduce((a,p)=>a+calcCumulativeBalance(p,currentMonth),0);
+
+  document.getElementById('overview-alerts').innerHTML =
+    `<div class="alert alert-green">✓ 所有月份資料已同步（截至 ${currentMonth.slice(0,4)}/${parseInt(currentMonth.slice(4))} 月）</div>`;
+
   document.getElementById('overview-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">投資方匯入</div><div class="metric-val amber">${fmtTWD(totalInvested)}</div></div>
     <div class="metric-card"><div class="metric-label">實際收入(日報表)</div><div class="metric-val green">${fmtTWD(totalInc)}</div></div>
     <div class="metric-card"><div class="metric-label">本月總支出</div><div class="metric-val red">${fmtTWD(totalExp)}</div></div>
-    <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${fmtTWD(net)}</div></div>
-    <div class="metric-card"><div class="metric-label">投資方匯入</div><div class="metric-val amber">${fmtTWD(cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0))}</div></div>
+    <div class="metric-card"><div class="metric-label">累計總餘額</div><div class="metric-val ${totalBalance>=0?'green':'red'}">${fmtTWD(totalBalance)}</div></div>
     <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>`;
-  const invPerPerson = incomeData ? Math.round(incomeData.totalTWD/PERSONS.length) : 0;
-  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return calcPersonIncome(p)+invPerPerson-e; });
-  const maxNet = Math.max(...nets.map(Math.abs), 1);
+
+  // 各人累計餘額 bar chart
+  const balances = PERSONS.map(p=>calcCumulativeBalance(p,currentMonth));
+  const maxBal = Math.max(...balances.map(Math.abs),1);
   document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>`
     <div class="bar-row">
       <div class="bar-name">${p}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,Math.round(Math.abs(nets[i])/maxNet*100))}%;background:${P_COLORS[i]}"></div></div>
-      <div class="bar-val">${nets[i]>=0?'+':''}${fmtTWD(nets[i])}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,Math.round(Math.abs(balances[i])/maxBal*100))}%;background:${P_COLORS[i]}"></div></div>
+      <div class="bar-val">${balances[i]>=0?'+':''}${fmtTWD(balances[i])}</div>
     </div>`).join('');
+
+  // 帳戶明細表格 - 當月數字 + 累計餘額
   document.getElementById('overview-person-tbody').innerHTML = PERSONS.map((p,i)=>{
-    const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0;
-    const inc2=calcPersonIncome(p); const n=inc2-e;
-    const inc=calcPersonIncome(p); const n2=inc-e; return `<tr><td>${p}</td><td class="td-mono td-green">${fmtTWD(inc)}</td><td class="td-mono td-red">${fmtTWD(e)}</td><td class="td-mono ${n2>=0?'td-green':'td-red'}">${n2>=0?'+':''}${fmtTWD(n2)}</td></tr>`;
+    const transfer = calcPersonIncome(p); // 當月轉帳匯入
+    const invShare = totalInc>0 ? Math.round(totalInc/PERSONS.length) : 0;
+    const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
+    const balance = calcCumulativeBalance(p, currentMonth);
+    return `<tr>
+      <td>${p}</td>
+      <td class="td-mono td-green">${fmtTWD(transfer)}</td>
+      <td class="td-mono td-green">${fmtTWD(invShare)}</td>
+      <td class="td-mono td-red">${fmtTWD(exp)}</td>
+      <td class="td-mono ${balance>=0?'td-green':'td-red'}">${balance>=0?'+':''}${fmtTWD(balance)}</td>
+    </tr>`;
   }).join('');
 }
 </script>
