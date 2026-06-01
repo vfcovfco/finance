@@ -481,6 +481,7 @@ function showPage(id, btn) {
   const titles = {overview:'總覽',expense:'支出表',income:'收入表',cashflow:'資金流水帳',accounts:'個人帳戶',investors:'投資方'};
   document.getElementById('pageTitle').textContent = titles[id]||id;
   document.getElementById('pageSub').textContent = currentMonth.slice(0,4)+'年'+parseInt(currentMonth.slice(4))+'月';
+  if (id==='overview') loadOverview();
   if (id==='expense' && !expenseData) loadExpense();
   if (id==='income'  && !incomeData)  loadIncome();
   if (id==='cashflow') loadCashflow();
