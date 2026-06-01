@@ -529,10 +529,12 @@ function parseExpense(rows) {
     const ds = String(r[0]);
     if (!ds.includes('月') && !ds.match(/^\d{5}$/)) continue;
     const usd = parseUSD(r[1]);
-    if (!usd || usd<=0) continue;
-    const rate = parseFloat(r[2]) || DEFAULT_RATE;
+    const qty = parseFloat(r[3]) || 0; // 帳號數量
     const vals = [4,5,6,7,8,9,10,11,12,13,14,15].map(c => parseTWD(r[c]));
     const total = vals.reduce((a,b)=>a+b,0);
+    // 有 USD 或 帳號數量 > 0 或 任何 TWD 金額 → 視為有效行
+    if (usd<=0 && qty<=0 && total<=0) continue;
+    const rate = parseFloat(r[2]) || DEFAULT_RATE;
     result.rows.push({ date:fmtDate(ds), usd, rate, vals, total });
     PERSONS.forEach((p,i) => { result.totals[p].ts += vals[i*2]; result.totals[p].lu += vals[i*2+1]; });
   }
