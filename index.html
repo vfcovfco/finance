@@ -263,7 +263,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div id="page-overview" class="page active">
         <div id="overview-alerts" class="alert-list"></div>
         <div id="overview-metrics" class="metric-row"></div>
-        <div class="sec-title">各帳戶本月淨額</div>
+        <div class="sec-title">各帳戶累計餘額</div>
         <div class="table-card" style="padding:16px 18px;"><div id="overview-bars"></div></div>
         <div class="sec-title">帳戶明細</div>
         <div class="table-card">
@@ -837,21 +837,33 @@ async function loadOverview() {
   const totalInc = calcTotalIncome();
   const totalInvested = cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0);
 
-  // 累計餘額加總
-  const totalBalance = PERSONS.reduce((a,p)=>a+calcCumulativeBalance(p,currentMonth),0);
+  // 累計餘額加總（用資金流水帳累計轉帳 + 所有月份收入 - 所有月份支出）
+  const allExpTot = {}; PERSONS.forEach(p=>{ allExpTot[p]=Object.values(allMonthsCache).reduce((a,d)=>a+(d.expense[p]||0),0); });
+  const allTransTot = {}; PERSONS.forEach(p=>{ allTransTot[p]=0; });
+  cashflowData.filter(r=>r.type==='內部轉帳').forEach(r=>{ if(allTransTot[r.to]!==undefined) allTransTot[r.to]+=r.amount; });
+  const allIncTot = Object.values(allMonthsCache).reduce((a,d)=>a+d.income,0);
+  const totalBalance = PERSONS.reduce((a,p)=>a+allTransTot[p]+Math.round(allIncTot/PERSONS.length)-allExpTot[p],0);
 
   document.getElementById('overview-alerts').innerHTML =
     `<div class="alert alert-green">✓ 所有月份資料已同步（截至 ${currentMonth.slice(0,4)}/${parseInt(currentMonth.slice(4))} 月）</div>`;
 
-  document.getElementById('overview-metrics').innerHTML = `
-    <div class="metric-card"><div class="metric-label">投資方匯入</div><div class="metric-val amber">${fmtTWD(totalInvested)}</div></div>
-    <div class="metric-card"><div class="metric-label">實際收入(日報表)</div><div class="metric-val green">${fmtTWD(totalInc)}</div></div>
-    <div class="metric-card"><div class="metric-label">本月總支出</div><div class="metric-val red">${fmtTWD(totalExp)}</div></div>
-    <div class="metric-card"><div class="metric-label">累計總餘額</div><div class="metric-val ${totalBalance>=0?'green':'red'}">${fmtTWD(totalBalance)}</div></div>
-    <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>`;
+    // 累計收入（所有月份）
+  const cumTotalInc = Object.values(allMonthsCache).reduce((a,d)=>a+d.income,0);
+  // 本月收入
+  const curMonthInc = allMonthsCache[currentMonth]?.income || 0;
 
-  // 各人累計餘額 bar chart
-  const balances = PERSONS.map(p=>calcCumulativeBalance(p,currentMonth));
+  document.getElementById('overview-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">投資方匯入（累計）</div><div class="metric-val amber">${fmtTWD(totalInvested)}</div></div>
+    <div class="metric-card"><div class="metric-label">累計收入（日報表）</div><div class="metric-val green">${fmtTWD(cumTotalInc)}</div></div>
+    <div class="metric-card"><div class="metric-label">${currentMonth.slice(0,4)}/${parseInt(currentMonth.slice(4))}月 收入</div><div class="metric-val green">${fmtTWD(curMonthInc)}</div></div>
+    <div class="metric-card"><div class="metric-label">${currentMonth.slice(0,4)}/${parseInt(currentMonth.slice(4))}月 支出</div><div class="metric-val red">${fmtTWD(totalExp)}</div></div>
+    <div class="metric-card"><div class="metric-label">累計總餘額</div><div class="metric-val ${totalBalance>=0?'green':'red'}">${fmtTWD(totalBalance)}</div></div>`;
+
+  // 各人累計餘額 bar chart（累計）
+  const _allT={}; const _allE={}; PERSONS.forEach(p=>{_allT[p]=0;_allE[p]=Object.values(allMonthsCache).reduce((a,d)=>a+(d.expense[p]||0),0);});
+  cashflowData.filter(r=>r.type==='內部轉帳').forEach(r=>{ if(_allT[r.to]!==undefined) _allT[r.to]+=r.amount; });
+  const _allInc=Object.values(allMonthsCache).reduce((a,d)=>a+d.income,0);
+  const balances = PERSONS.map(p=>_allT[p]+Math.round(_allInc/PERSONS.length)-_allE[p]);
   const maxBal = Math.max(...balances.map(Math.abs),1);
   document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>`
     <div class="bar-row">
@@ -860,17 +872,44 @@ async function loadOverview() {
       <div class="bar-val">${balances[i]>=0?'+':''}${fmtTWD(balances[i])}</div>
     </div>`).join('');
 
-  // 帳戶明細表格 - 當月數字 + 累計餘額
+  // 帳戶明細表格
+  // 轉帳匯入 = 所有月份累計（資金流水帳內部轉帳）
+  // 投資收入 = 所有月份累計（日報表收入）
+  // 本月支出 = 當月（隨月份選擇器變動）
+  // 帳戶餘額 = 所有月份累計
+  const allTransfers = {}; // 累計轉帳匯入
+  const allInvIncome = {}; // 累計投資收入
+  PERSONS.forEach(p=>{ allTransfers[p]=0; allInvIncome[p]=0; });
+
+  // 累計轉帳匯入（資金流水帳所有內部轉帳）
+  cashflowData.filter(r=>r.type==='內部轉帳').forEach(r=>{
+    if(allTransfers[r.to]!==undefined) allTransfers[r.to]+=r.amount;
+  });
+
+  // 累計投資收入（所有月份日報表收入平均分配）
+  const totalAllInc = Object.values(allMonthsCache).reduce((a,d)=>a+d.income,0);
+  PERSONS.forEach(p=>{ allInvIncome[p] = totalAllInc>0 ? Math.round(totalAllInc/PERSONS.length) : 0; });
+
+  // 所有月份累計支出（各人）
+  const allExpense = {};
+  PERSONS.forEach(p=>{
+    allExpense[p] = Object.values(allMonthsCache).reduce((a,d)=>a+(d.expense[p]||0),0);
+  });
+
   document.getElementById('overview-person-tbody').innerHTML = PERSONS.map((p,i)=>{
-    const transfer = calcPersonIncome(p); // 當月轉帳匯入
-    const invShare = totalInc>0 ? Math.round(totalInc/PERSONS.length) : 0;
-    const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
+    // 累計轉帳匯入（所有月份）
+    const cumTransfer = Object.values(allMonthsCache).reduce((a,d)=>a+(d.transfers[p]||0),0);
+    // 累計投資收入（平均分配）
+    const cumInvShare = cumTotalInc>0 ? Math.round(cumTotalInc/PERSONS.length) : 0;
+    // 本月支出（跟月份走）
+    const curExp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
+    // 累計餘額
     const balance = calcCumulativeBalance(p, currentMonth);
     return `<tr>
       <td>${p}</td>
-      <td class="td-mono td-green">${fmtTWD(transfer)}</td>
-      <td class="td-mono td-green">${fmtTWD(invShare)}</td>
-      <td class="td-mono td-red">${fmtTWD(exp)}</td>
+      <td class="td-mono td-green">${fmtTWD(cumTransfer)}</td>
+      <td class="td-mono td-green">${fmtTWD(cumInvShare)}</td>
+      <td class="td-mono td-red">${fmtTWD(curExp)}</td>
       <td class="td-mono ${balance>=0?'td-green':'td-red'}">${balance>=0?'+':''}${fmtTWD(balance)}</td>
     </tr>`;
   }).join('');
