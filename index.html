@@ -268,7 +268,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <div class="sec-title">帳戶明細</div>
         <div class="table-card">
           <div class="table-wrap"><table>
-            <thead><tr><th>帳戶</th><th>本月收入</th><th>本月支出</th><th>本月淨額</th></tr></thead>
+            <thead><tr><th>帳戶</th><th>轉帳匯入</th><th>投資收入</th><th>本月支出</th><th>帳戶餘額</th></tr></thead>
             <tbody id="overview-person-tbody"></tbody>
           </table></div>
         </div>
@@ -338,7 +338,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <div class="form-group"><label class="form-label">日期</label><input type="date" class="form-input" id="cf-date"></div>
               <div class="form-group"><label class="form-label">類型</label>
                 <select class="form-input" id="cf-type">
-                  <option>投資方匯入</option><option>內部轉帳</option><option>刷卡支出</option><option>其他支出</option>
+                  <option>投資方匯入</option><option>內部轉帳</option><option>投資方匯出</option><option>其他支出</option>
                 </select>
               </div>
               <div class="form-group"><label class="form-label">從</label>
@@ -640,7 +640,7 @@ function renderCashflow() {
       <div class="progress-wrap"><div class="progress-fill" style="width:${Math.min(100,Math.round(invested/target*100))}%"></div></div>
       <div class="metric-sub">${Math.round(invested/target*100)}%</div></div>
     <div class="metric-card"><div class="metric-label">尚待匯入</div><div class="metric-val amber">${fmtTWD(Math.max(0,target-invested))}</div></div>`;
-  const typeMap = {投資方匯入:'badge-green',內部轉帳:'badge-blue',刷卡支出:'badge-amber',其他支出:'badge-red'};
+  const typeMap = {投資方匯入:'badge-green',內部轉帳:'badge-blue',投資方匯出:'badge-red',其他支出:'badge-amber'};
   document.getElementById('cashflow-tbody').innerHTML = cashflowData.length
     ? cashflowData.map(r=>`
         <tr><td>${r.n}</td><td>${r.date}</td>
@@ -771,7 +771,7 @@ async function loadOverview() {
   const totalExp = expenseData ? Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0) : 0;
   const totalInc = calcTotalIncome();
   const totalPersonInc = PERSONS.reduce((a,p)=>a+calcPersonIncome(p),0);
-  const net = totalPersonInc - totalExp;
+  const net = totalPersonInc + totalInc - totalExp;
   document.getElementById('overview-alerts').innerHTML = totalExp===0
     ? `<div class="alert alert-info">正在載入支出資料...</div>`
     : `<div class="alert alert-green">✓ 日報表資料已同步（${currentMonth}）</div>`;
@@ -781,7 +781,8 @@ async function loadOverview() {
     <div class="metric-card"><div class="metric-label">本月淨額</div><div class="metric-val ${net>=0?'green':'red'}">${fmtTWD(net)}</div></div>
     <div class="metric-card"><div class="metric-label">投資方匯入</div><div class="metric-val amber">${fmtTWD(cashflowData.filter(r=>r.type==='投資方匯入').reduce((a,r)=>a+r.amount,0))}</div></div>
     <div class="metric-card"><div class="metric-label">帳戶人數</div><div class="metric-val">6</div></div>`;
-  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return calcPersonIncome(p)-e; });
+  const invPerPerson = incomeData ? Math.round(incomeData.totalTWD/PERSONS.length) : 0;
+  const nets = PERSONS.map(p=>{ const e=expenseData?expenseData.totals[p].ts+expenseData.totals[p].lu:0; return calcPersonIncome(p)+invPerPerson-e; });
   const maxNet = Math.max(...nets.map(Math.abs), 1);
   document.getElementById('overview-bars').innerHTML = PERSONS.map((p,i)=>`
     <div class="bar-row">
