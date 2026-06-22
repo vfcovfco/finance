@@ -340,12 +340,12 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               </div>
               <div class="form-group"><label class="form-label">從</label>
                 <select class="form-input" id="cf-from">
-                  <option value="">（空）</option><option>小郭</option><option>則儒</option><option>昀潔</option><option>世學</option><option>璿皓</option><option>婉茹</option><option>芮妤</option>
+                  <option value="">（空）</option><option>則儒</option><option>昀潔</option><option>世學</option><option>璿皓</option><option>婉茹</option><option>芮妤</option>
                 </select>
               </div>
               <div class="form-group"><label class="form-label">到</label>
                 <select class="form-input" id="cf-to">
-                  <option value="">（空）</option><option>小郭</option><option>則儒</option><option>昀潔</option><option>世學</option><option>璿皓</option><option>婉茹</option><option>芮妤</option>
+                  <option value="">（空）</option><option>則儒</option><option>昀潔</option><option>世學</option><option>璿皓</option><option>婉茹</option><option>芮妤</option>
                 </select>
               </div>
               <div class="form-group"><label class="form-label">金額 (TWD)</label><input type="number" class="form-input" id="cf-amount" placeholder="0"></div>
@@ -388,7 +388,22 @@ const MGMT_ID   = '1gNXmffpxBYQT71wB9Saup2XnuZyhBmLNfgRWVE5GvDk';
 const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets';
 const PERSONS   = ['則儒','昀潔','世學','璿皓','婉茹','芮妤'];
 const P_COLORS  = ['#3dd68c','#60a5fa','#f97316','#a78bfa','#fbbf24','#f472b6'];
-// 個人收入從資金流水帳「內部轉帳」自動計算
+// 個人資金流水帳餘額計算
+// 內部轉帳：到的人+，從的人-
+// 其他支出：到的人-
+function calcPersonCashflow(person) {
+  let balance = 0;
+  for (const r of cashflowData) {
+    if (r.type === '內部轉帳') {
+      if (r.to === person) balance += r.amount;
+      if (r.from === person) balance -= r.amount;
+    } else if (r.type === '其他支出') {
+      if (r.to === person) balance -= r.amount;
+    }
+  }
+  return balance;
+}
+// 保留舊名稱相容性（總覽帳戶明細用的轉帳匯入）
 function calcPersonIncome(person) {
   return cashflowData.filter(r=>r.type==='內部轉帳'&&r.to===person).reduce((a,r)=>a+r.amount,0);
 }
@@ -780,10 +795,16 @@ async function loadAllMonths() {
 
     await sleep(300); // 避免 API 限速
 
-    // 轉帳匯入（從資金流水帳按月份篩選）
+    // 資金流水帳（內部轉帳正負、其他支出負）
     const moStr = mo.slice(0,4)+'/'+parseInt(mo.slice(4));
-    cashflowData.filter(r=>r.type==='內部轉帳'&&r.date&&r.date.startsWith(moStr.slice(0,6)))
-      .forEach(r=>{ if(data.transfers[r.to]!==undefined) data.transfers[r.to]+=r.amount; });
+    cashflowData.filter(r=>r.date&&r.date.startsWith(moStr.slice(0,7))).forEach(r=>{
+      if(r.type==='內部轉帳'){
+        if(data.transfers[r.to]!==undefined) data.transfers[r.to]+=r.amount;
+        if(data.transfers[r.from]!==undefined) data.transfers[r.from]-=r.amount;
+      } else if(r.type==='其他支出'){
+        if(data.transfers[r.to]!==undefined) data.transfers[r.to]-=r.amount;
+      }
+    });
 
     allMonthsCache[mo] = data;
   }
@@ -793,15 +814,18 @@ async function loadAllMonths() {
 function calcCumulativeBalance(person, upToMonth) {
   const year = upToMonth.slice(0,4);
   const curM = parseInt(upToMonth.slice(4));
-  let balance = 0;
-  for (let m=1; m<=curM; m++) {
+  const START_MONTH = 5;
+  let expenseBalance = 0;
+  for (let m=START_MONTH; m<=curM; m++) {
     const mo = year + String(m).padStart(2,'0');
     const d = allMonthsCache[mo];
     if (!d) continue;
     const invShare = d.income > 0 ? Math.round(d.income/PERSONS.length) : 0;
-    balance += (d.transfers[person]||0) + invShare - (d.expense[person]||0);
+    expenseBalance += invShare - (d.expense[person]||0);
   }
-  return balance;
+  // 資金流水帳貢獻（內部轉帳正負 + 其他支出負）
+  const cashflowBalance = calcPersonCashflow(person);
+  return cashflowBalance + expenseBalance;
 }
 
 // ===== Overview =====
