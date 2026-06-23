@@ -314,7 +314,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <span id="income-source" style="font-size:11px;color:var(--text3);"></span>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>#</th><th>申請日</th><th>TS帳號</th><th>LU帳號</th><th>TF帳號</th><th>出金額(USD)</th><th>匯率</th><th>台幣(TWD)</th></tr></thead>
+              <thead><tr><th>#</th><th>申請日</th><th>對應人員</th><th>TS帳號</th><th>LU帳號</th><th>TF帳號</th><th>出金額(USD)</th><th>匯率</th><th>台幣(TWD)</th></tr></thead>
               <tbody id="income-tbody"></tbody>
             </table></div>
           </div>
@@ -563,10 +563,17 @@ function renderExpense() {
   document.getElementById('expense-metrics').innerHTML = `
     <div class="metric-card"><div class="metric-label">本月支出合計</div><div class="metric-val red">${fmtTWD(grand)}</div></div>
     <div class="metric-card"><div class="metric-label">刷卡筆數</div><div class="metric-val">${expenseData.rows.length}</div></div>`;
-  document.getElementById('expense-tbody').innerHTML = expenseData.rows.map(r=>`
-    <tr><td>${r.date}</td><td class="td-mono">$${r.usd.toFixed(2)}</td><td class="td-mono">${r.rate}</td>
-    ${r.vals.map(v=>`<td class="td-mono">${v>0?fmtTWD(v):'—'}</td>`).join('')}
-    <td class="td-mono td-amber">${fmtTWD(r.total)}</td></tr>`).join('');
+  document.getElementById('expense-tbody').innerHTML = expenseData.rows.map((r,ri)=>`
+    <tr id="exp-row-${ri}">
+      <td>${r.date}</td>
+      <td class="td-mono">$${r.usd.toFixed(2)}</td>
+      <td><input type="number" value="${r.rate}" step="0.1"
+        style="width:64px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;text-align:center;"
+        onchange="recalcExpenseRow(${ri}, this.value)"
+        title="點擊編輯匯率"></td>
+      ${r.vals.map((v,vi)=>`<td class="td-mono" id="exp-${ri}-${vi}">${v>0?fmtTWD(v):'—'}</td>`).join('')}
+      <td class="td-mono td-amber" id="exp-total-${ri}">${fmtTWD(r.total)}</td>
+    </tr>`).join('');
   document.getElementById('expense-summary-tbody').innerHTML = PERSONS.map((p,i)=>{
     const t=expenseData.totals[p];
     return `<tr><td>${p}</td><td class="td-mono">${fmtTWD(t.ts)}</td><td class="td-mono">${fmtTWD(t.lu)}</td><td class="td-mono td-amber">${fmtTWD(t.ts+t.lu)}</td></tr>`;
@@ -591,15 +598,20 @@ async function loadIncome() {
 }
 
 function parseIncome(rows) {
-  const result = { rows:[], totalUSD:0, totalTWD:0 };
+  const result = { rows:[], totalUSD:0, totalTWD:0, personIncome:{} };
+  PERSONS.forEach(p=>{ result.personIncome[p]=0; });
   let idx=1;
   for (const r of rows) {
     const usd = parseUSD(r[5]);
     if (!usd || usd<=0) continue;
     const rate = parseFloat(r[6]) || DEFAULT_RATE;
     const twd = usd*rate;
-    result.rows.push({ idx:idx++, date:r[1]||'—', ts:r[2]||'—', lu:r[3]||'—', tf:r[4]||'—', usd, rate, twd });
+    // 從 TS/LU/TF 欄位抓人名（格式：「人名 數字」，取空格前的人名）
+    const accountStr = (r[2]||r[3]||r[4]||'').trim();
+    const person = PERSONS.find(p => accountStr.startsWith(p)) || null;
+    result.rows.push({ idx:idx++, date:r[1]||'—', ts:r[2]||'—', lu:r[3]||'—', tf:r[4]||'—', usd, rate, twd, person });
     result.totalUSD += usd; result.totalTWD += twd;
+    if (person) result.personIncome[person] = (result.personIncome[person]||0) + twd;
   }
   return result;
 }
@@ -616,10 +628,82 @@ function renderIncome() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">本月尚無收入資料</td></tr>';
     return;
   }
-  tbody.innerHTML = incomeData.rows.map(r=>`
-    <tr><td>${r.idx}</td><td>${r.date}</td><td class="td-mono">${r.ts}</td><td class="td-mono">${r.lu}</td>
-    <td class="td-mono">${r.tf}</td><td class="td-mono td-green">$${r.usd.toFixed(2)}</td>
-    <td class="td-mono">${r.rate}</td><td class="td-mono td-green">${fmtTWD(r.twd)}</td></tr>`).join('');
+  tbody.innerHTML = incomeData.rows.map((r,ri)=>`
+    <tr>
+      <td>${r.idx}</td><td>${r.date}</td>
+      <td><span class="badge badge-green">${r.person||'未對應'}</span></td>
+      <td class="td-mono">${r.ts}</td><td class="td-mono">${r.lu}</td>
+      <td class="td-mono">${r.tf}</td>
+      <td class="td-mono td-green">$${r.usd.toFixed(2)}</td>
+      <td><input type="number" value="${r.rate}" step="0.1"
+        style="width:64px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 6px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;text-align:center;"
+        onchange="recalcIncomeRow(${ri}, this.value)"
+        title="點擊編輯匯率"></td>
+      <td class="td-mono td-green" id="inc-twd-${ri}">${fmtTWD(r.twd)}</td>
+    </tr>`).join('');
+}
+
+// ===== 匯率重新計算 =====
+function recalcExpenseRow(ri, newRate) {
+  const rate = parseFloat(newRate);
+  if (!rate || !expenseData || !expenseData.rows[ri]) return;
+  const r = expenseData.rows[ri];
+  // 按原比例重新換算各人金額（原本金額 / 舊匯率 × 新匯率）
+  const oldRate = r.rate;
+  r.rate = rate;
+  r.vals = r.vals.map(v => v > 0 ? Math.round(v / oldRate * rate) : 0);
+  r.total = r.vals.reduce((a,b)=>a+b,0);
+  // 更新畫面
+  r.vals.forEach((v,vi) => {
+    const cell = document.getElementById(`exp-${ri}-${vi}`);
+    if (cell) cell.textContent = v > 0 ? fmtTWD(v) : '—';
+  });
+  const totalCell = document.getElementById(`exp-total-${ri}`);
+  if (totalCell) totalCell.textContent = fmtTWD(r.total);
+  // 重算各人合計
+  PERSONS.forEach(p => { expenseData.totals[p] = {ts:0,lu:0}; });
+  expenseData.rows.forEach(row => {
+    PERSONS.forEach((p,i) => {
+      expenseData.totals[p].ts += row.vals[i*2];
+      expenseData.totals[p].lu += row.vals[i*2+1];
+    });
+  });
+  // 更新各人合計表
+  const sTbody = document.getElementById('expense-summary-tbody');
+  if (sTbody) {
+    sTbody.innerHTML = PERSONS.map((p,i) => {
+      const t = expenseData.totals[p];
+      return `<tr><td>${p}</td><td class="td-mono">${fmtTWD(t.ts)}</td><td class="td-mono">${fmtTWD(t.lu)}</td><td class="td-mono td-amber">${fmtTWD(t.ts+t.lu)}</td></tr>`;
+    }).join('');
+  }
+  // 更新本月支出合計
+  const grand = Object.values(expenseData.totals).reduce((a,p)=>a+p.ts+p.lu,0);
+  document.getElementById('expense-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">本月支出合計</div><div class="metric-val red">${fmtTWD(grand)}</div><div class="metric-sub" style="color:var(--amber);font-size:10px;">⚠ 匯率已手動調整，僅影響畫面</div></div>
+    <div class="metric-card"><div class="metric-label">刷卡筆數</div><div class="metric-val">${expenseData.rows.length}</div></div>`;
+}
+
+function recalcIncomeRow(ri, newRate) {
+  const rate = parseFloat(newRate);
+  if (!rate || !incomeData || !incomeData.rows[ri]) return;
+  const r = incomeData.rows[ri];
+  r.rate = rate;
+  r.twd = Math.round(r.usd * rate);
+  // 更新畫面
+  const twdCell = document.getElementById(`inc-twd-${ri}`);
+  if (twdCell) twdCell.textContent = fmtTWD(r.twd);
+  // 重算總計
+  incomeData.totalTWD = incomeData.rows.reduce((a,row)=>a+row.twd,0);
+  // 重算 personIncome
+  PERSONS.forEach(p=>{ incomeData.personIncome[p]=0; });
+  incomeData.rows.forEach(row=>{
+    if(row.person) incomeData.personIncome[row.person] = (incomeData.personIncome[row.person]||0) + row.twd;
+  });
+  // 更新指標
+  document.getElementById('income-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">本月收入(USD)</div><div class="metric-val green">$${incomeData.totalUSD.toFixed(2)}</div></div>
+    <div class="metric-card"><div class="metric-label">本月收入(TWD)</div><div class="metric-val green">${fmtTWD(incomeData.totalTWD)}</div><div class="metric-sub" style="color:var(--amber);font-size:10px;">⚠ 匯率已手動調整，僅影響畫面</div></div>
+    <div class="metric-card"><div class="metric-label">收入筆數</div><div class="metric-val">${incomeData.rows.length}</div></div>`;
 }
 
 // ===== Cashflow =====
@@ -694,7 +778,7 @@ function renderAccounts() {
   contents.innerHTML = PERSONS.map((p,i)=>{
     const transfer = calcPersonIncome(p); // 當月轉帳匯入
     const exp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
-    const invShare = incomeData&&incomeData.totalTWD>0 ? Math.round(incomeData.totalTWD/PERSONS.length) : 0;
+    const invShare = incomeData&&incomeData.personIncome ? (incomeData.personIncome[p]||0) : 0;
     const monthNet = transfer + invShare - exp;
     const cumBalance = calcCumulativeBalance(p, currentMonth);
     const rows = expenseData ? expenseData.rows.filter(r=>r.vals[i*2]>0||r.vals[i*2+1]>0) : [];
@@ -791,6 +875,7 @@ async function loadAllMonths() {
       const rows = await fetchSheet(DAILY_ID, mo+'收入', 'A1:G60');
       const parsed = parseIncome(rows);
       data.income = parsed.totalTWD;
+      data.personIncome = parsed.personIncome; // 各人對應收入
     } catch(e) {}
 
     await sleep(300); // 避免 API 限速
@@ -820,8 +905,9 @@ function calcCumulativeBalance(person, upToMonth) {
     const mo = year + String(m).padStart(2,'0');
     const d = allMonthsCache[mo];
     if (!d) continue;
-    const invShare = d.income > 0 ? Math.round(d.income/PERSONS.length) : 0;
-    expenseBalance += invShare - (d.expense[person]||0);
+    // 收入用該人對應金額，不平均分配
+    const personInc = (d.personIncome && d.personIncome[person]) ? d.personIncome[person] : 0;
+    expenseBalance += personInc - (d.expense[person]||0);
   }
   // 資金流水帳貢獻（內部轉帳正負 + 其他支出負）
   const cashflowBalance = calcPersonCashflow(person);
@@ -908,8 +994,8 @@ async function loadOverview() {
   document.getElementById('overview-person-tbody').innerHTML = PERSONS.map((p,i)=>{
     // 累計轉帳匯入（所有月份）
     const cumTransfer = Object.values(allMonthsCache).reduce((a,d)=>a+(d.transfers[p]||0),0);
-    // 累計投資收入（平均分配）
-    const cumInvShare = cumTotalInc>0 ? Math.round(cumTotalInc/PERSONS.length) : 0;
+    // 累計投資收入（各人對應，非平均）
+    const cumInvShare = Object.values(allMonthsCache).reduce((a,d)=>a+((d.personIncome&&d.personIncome[p])||0),0);
     // 本月支出（跟月份走）
     const curExp = expenseData ? expenseData.totals[p].ts+expenseData.totals[p].lu : 0;
     // 累計餘額
